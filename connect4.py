@@ -16,8 +16,8 @@ class Board:
     self.player = 'X'
     self.opponent = 'O'
     self.empty = '.'
-    self.width = 7
-    self.height = 6
+    self.width = 7  # Width of Connect4 board
+    self.height = 6 # Height of Connect4 board
     self.fields = {}
     for y in range(self.height):
       for x in range(self.width):
@@ -25,19 +25,23 @@ class Board:
     # copy constructor
     if other:
       self.__dict__ = deepcopy(other.__dict__)
-
+  
+  # Method to select where the player would want to drop the counter
   def move(self,x):
     board = Board(self)
     for y in range(board.height):
-      if board.fields[x,y] == board.empty:
-        board.fields[x,y] = board.player
+      if board.fields[x,y] == board.empty:  # if area selected is empty
+        board.fields[x,y] = board.player    # sets peice in the desired location
         break
     board.player,board.opponent = board.opponent,board.player
     return board
 
+  # Communicates with the minimax method and sends info to the heuristic_score method
   def __heuristic(self):
     return self.__heuristic_score(self.player)-self.__heuristic_score(self.opponent)
-
+  
+  # This limits the tree to look-ahead of four moves to limit the time the AI is thinking
+  # On the 4th level, this method will be used to score the nodes
   def __heuristic_score(self, player):
     lines = self.__winlines(player)
     winpositions = self.__winpositions(lines,player)
@@ -77,34 +81,39 @@ class Board:
         winpositions["{0},{1}".format(x,y)]=True
     return winpositions
 
+  # Method to calculate who of the two players have won
   def __winlines(self, player):
     lines = []
-    # horizontal
-    for y in range(self.height):
+    
+    # Checks if there is a winner in a row
+    for y in range(self.height):        # goes along checking the column
       winning = []
-      for x in range(self.width):
+      for x in range(self.width):       # shifting from column to column to ultimately check row for winner
         if self.fields[x,y] == player or self.fields[x,y] == self.empty:
           winning.append((x,y))
-          if len(winning) >= 4:
-            lines.append(winning[-4:])
-        else:
+          if len(winning) >= 4:         # if the player did not have 4 in a row
+            lines.append(winning[-4:])  # the count resets
+        else: # define winner
           winning = []
-    # vertical
-    for x in range(self.width):
+          
+    # Checks if there is a winner in a column 
+    for x in range(self.width):        # goes along checking the row
       winning = []
-      for y in range(self.height):
+      for y in range(self.height):     # shifting row to row ultimately checking column for winner 
         if self.fields[x,y] == player or self.fields[x,y] == self.empty:
           winning.append((x,y))
-          if len(winning) >= 4:
-            lines.append(winning[-4:])
-        else:
+          if len(winning) >= 4:        # if the player did not have 4 in a column
+            lines.append(winning[-4:]) # the count resets
+        else: # define winner
           winning = []
-    # diagonal
+          
+    # Checks if there is a winner in the positve slop
     winning = []
-    for cx in range(self.width-1):
-      sx,sy = max(cx-2,0),abs(min(cx-2,0))
+    for cx in range(self.width-1):   
+      sx,sy = max(cx-2,0),abs(min(cx-2,0))   # starts off at the bottom checking and moves up in the 
+                                             # column while shifting right using the next loop
       winning = []
-      for cy in range(self.height):
+      for cy in range(self.height):          # shifts through each row
         x,y = sx+cy,sy+cy
         if x<0 or y<0 or x>=self.width or y>=self.height:
           continue
@@ -112,14 +121,16 @@ class Board:
           winning.append((x,y))
           if len(winning) >= 4:
             lines.append(winning[-4:])
-        else:
+        else:                                 # define winner
           winning = []
-    # other diagonal
+          
+    # Checks if there is a winner in the negative slope
     winning = []
     for cx in range(self.width-1):
-      sx,sy = self.width-1-max(cx-2,0),abs(min(cx-2,0))
+      sx,sy = self.width-1-max(cx-2,0),abs(min(cx-2,0))  # starts off at the top checking and moves down in the 
+                                                         # column while shifting right using the next loop
       winning = []
-      for cy in range(self.height):
+      for cy in range(self.height):                      # shifts through each row
         x,y = sx-cy,sy+cy
         if x<0 or y<0 or x>=self.width or y>=self.height:
           continue
@@ -127,25 +138,29 @@ class Board:
           winning.append((x,y))
           if len(winning) >= 4:
             lines.append(winning[-4:])
-        else:
+        else:                                           # define winner
           winning = []
+          
     # return
     return lines
 
-  def __iterative_deepening(self,think):
-    g = (3,None)
+  # Method to set timer to limit search time of some fixed amount of nodes in the search tree
+  def __iterative_deepening(self,think): 
+    g = (3,None)  
     start = time()
     for d in range(1,10):
-      g = self.__mtdf(g, d)
+      g = self.__mtdf(g, d)  # limits search time in __mtdf method
       if time()-start>think:
         break
     return g;
 
+  # MTD(f) = minimax + horizon + alpha-beta pruning + null-window + iterative deeping + transpostion table
+  # Method is a minimax algorithm that calculates and returns best computer move possible
   def __mtdf(self, g, d):
-    upperBound = +1000
-    lowerBound = -1000
+    upperBound = +1000              # win
+    lowerBound = -1000              # loss
     best = g
-    while lowerBound < upperBound:
+    while lowerBound < upperBound:  # inorder to go through the problems
       if g[0] == lowerBound:
         beta = g[0]+1
       else:
@@ -159,6 +174,8 @@ class Board:
         lowerBound = g[0]
     return best
 
+  # Uses alpha beta pruning
+  # MiniMax algorithm
   def __minimax(self, player, depth, alpha, beta):
     lower = Board.nodes.get(str(self)+str(depth)+'lower',None)
     upper = Board.nodes.get(str(self)+str(depth)+'upper',None)
@@ -171,9 +188,9 @@ class Board:
         return (upper,None)
       beta = max(beta,upper)
     if self.won():
-      if player:
+      if player:              # player wins
         return (-999,None)
-      else:
+      else:                   # Bot wins
         return (+999,None)
     elif self.tied():
       return (0,None)
@@ -205,40 +222,47 @@ class Board:
       Board.nodes[self.__mirror()+str(depth)+"lower"] = best[0]
     return best
 
+  # Sets interaive_deepening method to ensure best move is made
   def best(self):
     return self.__iterative_deepening(2)[1]
 
+  # When a user is has tied with the AI
   def tied(self):
     for (x,y) in self.fields:
       if self.fields[x,y]==self.empty:
         return False
     return True
 
+  # Method to calculate if the player or the AI won
   def won(self):
-    # horizontal
-    for y in range(self.height):
+    
+    # Checks if there is a winner in a row
+    for y in range(self.height):  # goes along checking the column
       winning = []
-      for x in range(self.width):
+      for x in range(self.width): # shifting column to column ultimately checking row for winner
         if self.fields[x,y] == self.opponent:
           winning.append((x,y))
-          if len(winning) == 4:
-            return winning
+          if len(winning) == 4: 
+            return winning        # define winner
         else:
           winning = []
-    # vertical
-    for x in range(self.width):
+          
+    # Checks if there is a winner in a column 
+    for x in range(self.width):    # goes along checking the row
       winning = []
-      for y in range(self.height):
+      for y in range(self.height): # shifting row to row ultimately checking column for winner
         if self.fields[x,y] == self.opponent:
           winning.append((x,y))
-          if len(winning) == 4:
-            return winning
+          if len(winning) == 4: 
+            return winning         # define winner
         else:
           winning = []
-    # diagonal
+          
+    # Checks if there is a winner in the positve slope
     winning = []
     for cx in range(self.width-1):
-      sx,sy = max(cx-2,0),abs(min(cx-2,0))
+      sx,sy = max(cx-2,0),abs(min(cx-2,0)) # starts off at the bottom checking and moves up in the 
+                                           # column while shifting right using the next loop
       winning = []
       for cy in range(self.height):
         x,y = sx+cy,sy+cy
@@ -247,22 +271,24 @@ class Board:
         if self.fields[x,y] == self.opponent:
           winning.append((x,y))
           if len(winning) == 4:
-            return winning
+            return winning                   # define winner
         else:
           winning = []
-    # other diagonal
+          
+    # Checks if there is a winner in the negative slope
     winning = []
     for cx in range(self.width-1):
-      sx,sy = self.width-1-max(cx-2,0),abs(min(cx-2,0))
+      sx,sy = self.width-1-max(cx-2,0),abs(min(cx-2,0))  # starts off at the top checking and moves down in the 
+                                                         # column while shifting right using the next loop
       winning = []
-      for cy in range(self.height):
+      for cy in range(self.height):                      # shifts through each row
         x,y = sx-cy,sy+cy
         if x<0 or y<0 or x>=self.width or y>=self.height:
           continue
         if self.fields[x,y] == self.opponent:
           winning.append((x,y))
-          if len(winning) == 4:
-            return winning
+          if len(winning) == 4: 
+            return winning                                # define winner
         else:
           winning = []
     # default
@@ -270,8 +296,8 @@ class Board:
 
   def __mirror(self):
     string = ''
-    for y in range(self.height):
-      for x in range(self.width):
+    for y in range(self.height):  # shifts through the column
+      for x in range(self.width):  # shifts through the rows
         string+=' '+self.fields[self.width-1-x,self.height-1-y]
       string+="\n"
     return string
